@@ -1,55 +1,51 @@
 import React, { useEffect, useState } from "react";
-import { Observable } from "rxjs";
+import "./App.css";
+import { interval, Subject } from "rxjs";
+import { takeUntil, exhaustMap } from "rxjs/operators";
 
 function App() {
-  const [sec, setSec] = useState(0);
-  const [status, setStatus] = useState("");
+    const [sec, setSec] = useState(0);
+    const [status, setStatus] = useState("");
+    const action$ = new Subject();
+    const doubleClick = action$.pipe(
+        exhaustMap(() => action$.pipe(takeUntil(interval(300))))
+    );
+    doubleClick.subscribe(() => setStatus("wait"));
 
-  useEffect(() => {
-    const observable$ = new Observable((subscriber) => {
-      const intER = setInterval(() => {
-        if (status === "run") {
-          subscriber.next(setSec((val) => val + 1000));
-          console.log(status);
-        }
-        if (status === "stop") {
-          subscriber.complete();
-          subscription.unsubscribe();
-        }
-      }, 1000);
-      console.log(status);
-      return function unsubscribe() {
-        clearInterval(intER);
-      };
-    });
-    const subscription = observable$.subscribe({ next: console.log() });
-  }, [status]);
+    useEffect(() => {
+        const observable$ = interval(1000);
+        const sub = observable$.subscribe(() => {
+            if (status === "start") {
+                setSec((prevSec) => prevSec + 1000);
+            }
+        });
+        return () => {
+            sub.unsubscribe();
+        };
+    }, [status]);
 
-  const start = () => {
-    setStatus("run");
-  };
-  const stop = () => {
-    setSec(0);
-    setStatus("stop");
-  };
-  const reset = () => {
-    setSec(0);
-  };
-  const wait = () => {
-    setStatus("wait");
-  };
-  return (
-    <div>
-      <span> {new Date(sec).toISOString().slice(11, 19)}</span>
-      <button className="start-button" onClick={start}>
-        Start
-      </button>
-      <button className="stop-button" onClick={stop}>
-        Stop
-      </button>
-      <button onClick={reset}>Reset</button>
-      <button onClick={wait}>Wait</button>
-    </div>
-  );
+    const stop = () => {
+        setSec(0);
+        setStatus("stop");
+    };
+    return (
+        <div className="block-timer">
+            <span className="view">
+                {new Date(sec).toISOString().slice(11, 19)}
+            </span>
+            <button className="btn" onClick={() => setStatus("start")}>
+                Start
+            </button>
+            <button className="btn" onClick={stop}>
+                Stop
+            </button>
+            <button className="btn" onClick={() => setSec(0)}>
+                Reset
+            </button>
+            <button className="btn" onClick={() => action$.next()}>
+                Wait2
+            </button>
+        </div>
+    );
 }
 export default App;
